@@ -6,6 +6,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "imgui\imgui.h"
+#include "imgui\imgui_impl_glfw.h"
+#include "imgui\imgui_impl_opengl3.h"
 
 #include "shader.h"
 #include "camera.h"
@@ -16,18 +19,33 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window);
-unsigned int loadTexture(const char *path, bool gammaCorrection);
+void processInput(GLFWwindow* window);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void renderQuad();
 void renderCube();
+void setImgui(GLFWwindow* window);
 const float M_PI = glm::acos(-1);
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1333;
+const unsigned int SCR_HEIGHT = 800;
+
+bool MC_mode = 0;
+
+//模型参数
+float modelXYZ[3] = { 0.0f, 0.2f, 0.0f };
+float modelAngle = 0;
+
+//光照参数
+float lightXYZ[3] = { 2.0f, 4.0f, 2.0f };
+float lightColor[3] = { 1.0f, 1.0f, 1.0f };
+
+//SSDO参数
+int kernelSize = 64;
+float radius = 0.5f;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 7.0f));
 float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
@@ -66,7 +84,7 @@ int main()
 
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "SSDO", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -77,9 +95,8 @@ int main()
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetKeyCallback(window, key_callback);
 
-	// tell GLFW to capture our mouse
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -92,6 +109,15 @@ int main()
 	// configure global opengl state
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST); // Enable the z-buffer test in the rasterization
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui::StyleColorsClassic();
+	ImGui_ImplOpenGL3_Init("#version 330");
+
 	// build and compile shaders
 	// -------------------------
 	Shader GeometryShader("../GLSL/geometry.vs", "../GLSL/geometry.fs");
@@ -101,10 +127,10 @@ int main()
 	Shader IndirectShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_indirect.fs");
 	Shader IndirectBlurShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_blur.fs");
 	Shader MixerShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_mixer.fs");
-	Shader SkyboxShader("../GLSL/skybox.vs", "../GLSL/skybox.fs");
+	Shader SkyboxShader("../GLSL/ssdo_skybox.vs", "../GLSL/ssdo_skybox.fs");
 	// load models
 	// -----------
-	Model backpack("../resources/objects/backpack/backpack.obj");
+	Model backpack("../resources/objects/dragon.obj");
 
 	// configure g-buffer framebuffer
 	// ------------------------------
@@ -151,10 +177,10 @@ int main()
 
 	// also create framebuffer to hold SSAO processing stage 
 	// -----------------------------------------------------
-	unsigned int 
+	unsigned int
 		ssdoFBO, ssdoBlurFBO, ssdoLightingFBO, ssdoIndirectFBO, ssdoIndirectBlurFBO, skyboxFBO,
 		ssdoTex, ssdoBlurTex, ssdoLightingTex, ssdoIndirectTex, ssdoIndirectBlurTex, skyboxTex;
-	unsigned int *FBOs[] = {
+	unsigned int* FBOs[] = {
 		&ssdoFBO,
 		&ssdoBlurFBO,
 		&ssdoLightingFBO,
@@ -162,7 +188,7 @@ int main()
 		&ssdoIndirectBlurFBO,
 		&skyboxFBO,
 	};
-	unsigned int *Texs[] = {
+	unsigned int* Texs[] = {
 		&ssdoTex,
 		&ssdoBlurTex,
 		&ssdoLightingTex,
@@ -212,7 +238,7 @@ int main()
 		glm::vec3 noise(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, 0.0f); // rotate around z-axis (in tangent space)
 		ssdoNoise.push_back(noise);
 	}
-	unsigned int noiseTexture; 
+	unsigned int noiseTexture;
 	glGenTextures(1, &noiseTexture);
 	glBindTexture(GL_TEXTURE_2D, noiseTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssdoNoise[0]);
@@ -222,10 +248,6 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	unsigned int skyboxMap = loadCubemap(SKYBOX_TEXTURE);
-	// lighting info
-	// -------------
-	glm::vec3 lightPos = glm::vec3(2.0, 4.0, -2.0);
-	glm::vec3 lightColor = glm::vec3(0.8, 0.8, 0.6);
 
 	// shader configuration
 	// --------------------
@@ -279,6 +301,11 @@ int main()
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+		if (MC_mode)
+			glfwSetCursorPosCallback(window, mouse_callback);
+		else
+			glfwSetCursorPosCallback(window, NULL);
+
 		// input
 		// -----
 		processInput(window);
@@ -301,16 +328,16 @@ int main()
 		// room cube
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.0, -0.5f, 0.0f));
-		model = glm::scale(model, glm::vec3(4.0f));
-		model = glm::rotate(model, M_PI/2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(2.0f));
+		model = glm::rotate(model, M_PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
 		GeometryShader.setMat4("model", model);
-		//GeometryShader.setInt("invertedNormals", 1); // invert normals as we're inside the cube
+		//GeometryShader.setInt("invertedNormals", 1); 
 		renderQuad();
 		GeometryShader.setInt("invertedNormals", 0);
 		// backpack model on the floor
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.5f, 0.0));
-		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
+		model = glm::translate(model, glm::vec3(0.0f, 0.2f, 0.0));
+		model = glm::rotate(model, glm::radians(modelAngle), glm::vec3(1.0, 0.0, 0.0));
 		model = glm::scale(model, glm::vec3(1.0f));
 		GeometryShader.setMat4("model", model);
 		backpack.Draw(GeometryShader);
@@ -322,9 +349,9 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		LightingShader.use();
 		// send light relevant uniforms
-		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightPos, 1.0));
+		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightXYZ[0], lightXYZ[1], lightXYZ[2], 1.0));
 		LightingShader.setVec3("light.Position", lightPosView);
-		LightingShader.setVec3("light.Color", lightColor);
+		LightingShader.setVec3("light.Color", glm::fvec3(lightColor[0], lightColor[1], lightColor[2]));
 		// Update attenuation parameters
 		const float linear = 0.09f;
 		const float quadratic = 0.032f;
@@ -346,7 +373,10 @@ int main()
 		DirectShader.use();
 		DirectShader.setMat4("projection", projection);
 		DirectShader.setMat4("iview", glm::inverse(view));
-		
+		DirectShader.setInt("kernelSize", kernelSize);
+		DirectShader.setFloat("radius", radius);
+
+
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPositionDepth);
 		glActiveTexture(GL_TEXTURE1);
@@ -408,7 +438,7 @@ int main()
 		renderCube();
 		glDepthFunc(GL_LESS);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		
+
 		// 7. Accumulate Light pass
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		MixerShader.use();
@@ -430,8 +460,8 @@ int main()
 		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, skyboxTex);
 		renderQuad();
-		
 
+		setImgui(window);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
@@ -443,167 +473,7 @@ int main()
 	return 0;
 }
 
-// renderCube() renders a 1x1 3D cube in NDC.
-// -------------------------------------------------
-unsigned int cubeVAO = 0;
-unsigned int cubeVBO = 0;
-void renderCube()
-{
-	// initialize (if necessary)
-	if (cubeVAO == 0)
-	{
-		float vertices[] = {
-			// back face
-			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
-			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
-			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
-			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
-			// front face
-			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
-			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
-			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
-			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
-			// left face
-			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
-			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
-			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
-			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
-			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
-			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
-			// right face
-			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
-			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
-			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
-			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
-			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
-			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
-			// bottom face
-			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
-			 1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
-			 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
-			 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
-			-1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
-			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
-			// top face
-			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
-			 1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
-			 1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
-			 1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
-			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
-			-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
-		};
-		glGenVertexArrays(1, &cubeVAO);
-		glGenBuffers(1, &cubeVBO);
-		// fill buffer
-		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		// link vertex attributes
-		glBindVertexArray(cubeVAO);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-	}
-	// render Cube
-	glBindVertexArray(cubeVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glBindVertexArray(0);
-}
 
-
-// renderQuad() renders a 1x1 XY quad in NDC
-// -----------------------------------------
-unsigned int quadVAO = 0;
-unsigned int quadVBO;
-void renderQuad()
-{
-	if (quadVAO == 0)
-	{
-		float quadVertices[] = {
-			// positions        // texture Coords
-			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-		};
-		// setup plane VAO
-		glGenVertexArrays(1, &quadVAO);
-		glGenBuffers(1, &quadVBO);
-		glBindVertexArray(quadVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	}
-	glBindVertexArray(quadVAO);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	glBindVertexArray(0);
-}
-
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
-}
-
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
-	glViewport(0, 0, width, height);
-}
-
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
-{
-	float xpos = static_cast<float>(xposIn);
-	float ypos = static_cast<float>(yposIn);
-	if (firstMouse)
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
-	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-	lastX = xpos;
-	lastY = ypos;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-	camera.ProcessMouseScroll(static_cast<float>(yoffset));
-}
 unsigned int loadCubemap(vector<std::string> faces) {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -612,7 +482,7 @@ unsigned int loadCubemap(vector<std::string> faces) {
 	int width, height, nrComponents;
 	for (unsigned int i = 0; i < faces.size(); i++)
 	{
-		unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrComponents, 0);
+		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrComponents, 0);
 		if (data) {
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 			stbi_image_free(data);
@@ -629,4 +499,49 @@ unsigned int loadCubemap(vector<std::string> faces) {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 	return textureID;
+}
+
+void setImgui(GLFWwindow* window)
+{
+	bool Imgui;
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+
+	ImGui::NewFrame();
+	ImGui::Begin("Settings", &Imgui, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_MenuBar);
+
+	ImGui::Text("SSDO Settings:");
+	ImGui::SliderInt("Size of Kernel", &kernelSize, 1, 500);
+	ImGui::SliderFloat("Radius", &radius, 0.0f, 3.0f, "%.1f");
+
+	ImGui::Text("Light Settings:");
+	ImGui::Text("Position:");
+	ImGui::SliderFloat("Light Position.x", &lightXYZ[0], -10.0f, 10.0f, "%.3f");
+	ImGui::SliderFloat("Light Position.y", &lightXYZ[1], -10.0f, 10.0f, "%.3f");
+	ImGui::SliderFloat("Light Position.z", &lightXYZ[2], -10.0f, 10.0f, "%.3f");
+	ImGui::Text("Color:");
+	ImGui::ColorEdit3("Light Color", lightColor);
+
+	ImGui::Text("Model Settings:");
+	ImGui::SliderFloat("Model Angel", &modelAngle, -180.0f, 180.0f, "angle = %.1f");
+
+	ImGui::BeginMenuBar();
+	if (ImGui::BeginMenu("Options") == 1)
+	{
+		if (ImGui::MenuItem("MC Mode", NULL))
+		{
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			MC_mode = 1;
+		}
+		if (ImGui::MenuItem("Quit", NULL))
+			exit(0);
+		ImGui::EndMenu();
+	}
+	ImGui::EndMenuBar();
+
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 }

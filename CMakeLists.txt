@@ -36,6 +36,7 @@ set(LIBS ${GLFW3_LIBRARY} ${OPENGL_LIBRARY} GLAD ${CMAKE_DL_LIBS} ${ASSIMP_LIBRA
 
 include_directories(
     "${CMAKE_SOURCE_DIR}/src"
+	"${CMAKE_SOURCE_DIR}/src/imgui"
     "${CMAKE_SOURCE_DIR}/include"
     "${CMAKE_SOURCE_DIR}/include/glad"
     "${CMAKE_SOURCE_DIR}/include/glm"
