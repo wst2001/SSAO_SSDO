@@ -1,22 +1,28 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
-project(SSDO)
+project(SSAO_SSDO)
 
 link_directories(${CMAKE_SOURCE_DIR}/lib)
 
 file(GLOB_RECURSE SOURCE_FILES
-    ${CMAKE_SOURCE_DIR}/src/*.c
-    ${CMAKE_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/includes/*.c
+    ${CMAKE_SOURCE_DIR}/src/includes/*.cpp
+	${CMAKE_SOURCE_DIR}/src/imgui/*.c
+    ${CMAKE_SOURCE_DIR}/src/imgui/*.cpp
 )
 file(GLOB_RECURSE HEADER_FILES
-    ${CMAKE_SOURCE_DIR}/src/*.h
-    ${CMAKE_SOURCE_DIR}/src/*.hpp  
+    ${CMAKE_SOURCE_DIR}/src/includes/*.h
+    ${CMAKE_SOURCE_DIR}/src/includes/*.hpp
+	${CMAKE_SOURCE_DIR}/src/imgui/*.h
+    ${CMAKE_SOURCE_DIR}/src/imgui/*.hpp  
 )
 
 configure_file(src/helpers/RootDir.h.in src/helpers/RootDir.h)
 include_directories(${CMAKE_BINARY_DIR}/src)
 
-add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
+add_executable(SSAO ${HEADER_FILES} ${SOURCE_FILES} ${CMAKE_SOURCE_DIR}/src/SSAO.cpp)
+add_executable(SSDO ${HEADER_FILES} ${SOURCE_FILES} ${CMAKE_SOURCE_DIR}/src/SSDO.cpp)
+add_executable(SSAOplusSSDO ${HEADER_FILES} ${SOURCE_FILES} ${CMAKE_SOURCE_DIR}/src/SSAOplusSSDO.cpp)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -41,8 +47,9 @@ include_directories(
     "${CMAKE_SOURCE_DIR}/include/glad"
     "${CMAKE_SOURCE_DIR}/include/glm"
 )
-target_link_libraries(${PROJECT_NAME} ${LIBS})
-
+target_link_libraries(SSAO ${LIBS})
+target_link_libraries(SSDO ${LIBS})
+target_link_libraries(SSAOplusSSDO ${LIBS})
 if(MSVC_IDE)
 	# Macro to preserve source files hierarchy in the IDE
 	macro(GroupSources curdir)
@@ -65,11 +72,22 @@ endif()
 
 # Copy dlls
 if(WIN32)
-	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+	add_custom_command(TARGET SSAO POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 		"${PROJECT_SOURCE_DIR}/dlls"
-		$<TARGET_FILE_DIR:${PROJECT_NAME}>)
+		$<TARGET_FILE_DIR:SSAO>)
 endif()
 
+if(WIN32)
+	add_custom_command(TARGET SSDO POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${PROJECT_SOURCE_DIR}/dlls"
+		$<TARGET_FILE_DIR:SSDO>)
+endif()
 
-
+if(WIN32)
+	add_custom_command(TARGET SSAOplusSSDO POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+		"${PROJECT_SOURCE_DIR}/dlls"
+		$<TARGET_FILE_DIR:SSAOplusSSDO>)
+endif()

@@ -20,7 +20,7 @@ void main()
     TexCoords = aTexCoords;
     
     mat3 normalMatrix = transpose(inverse(mat3(view * model)));
-    Normal = normalMatrix * aNormal;//(invertedNormals ? -aNormal : aNormal);
+    Normal = normalMatrix * aNormal;
     
     gl_Position = projection * viewPos;
 }

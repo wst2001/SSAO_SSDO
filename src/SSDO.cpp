@@ -6,13 +6,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "imgui\imgui.h"
-#include "imgui\imgui_impl_glfw.h"
-#include "imgui\imgui_impl_opengl3.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
-#include "shader.h"
-#include "camera.h"
-#include "model.h"
+#include "includes/shader.h"
+#include "includes/camera.h"
+#include "includes/model.h"
 
 #include <iostream>
 #include <random>
@@ -33,8 +33,12 @@ const unsigned int SCR_HEIGHT = 800;
 bool MC_mode = 0;
 
 //模型参数
+int modelType = 0;
+int previosType = 0;
 float modelXYZ[3] = { 0.0f, 0.2f, 0.0f };
-float modelAngle = 0;
+float modelAngle1 = 0, modelAngle2 = 0, modelAngle3 = 0;
+float modelScale[13] = { 1.0,1.2,1.0,0.05,10.0,0.02,0.008,1.0,0.01,1.5 };
+float modelPosition[13] = { 0.2 ,0.7,0.5,0.3,-0.85,0.6,0,0.35,-0.45,0 };
 
 //光照参数
 float lightXYZ[3] = { 2.0f, 4.0f, 2.0f };
@@ -71,7 +75,7 @@ static const std::vector<std::string> SKYBOX_TEXTURE = {
 
 int main()
 {
-	// glfw: initialize and configure
+	// GLFW初始化
 	// ------------------------------
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -82,8 +86,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-	// glfw window creation
-	// --------------------
+	// GLFW window
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "SSDO", NULL, NULL);
 	if (window == NULL)
 	{
@@ -98,7 +101,7 @@ int main()
 	glfwSetKeyCallback(window, key_callback);
 
 
-	// glad: load all OpenGL function pointers
+	// GLAD初始化
 	// ---------------------------------------
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
@@ -106,10 +109,12 @@ int main()
 		return -1;
 	}
 
-	// configure global opengl state
+	// OpenGL渲染设置
 	// -----------------------------
-	glEnable(GL_DEPTH_TEST); // Enable the z-buffer test in the rasterization
+	glEnable(GL_DEPTH_TEST); // 启动深度测试
 
+	// ImGui初始化
+	// -----------------------------	
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
@@ -118,7 +123,7 @@ int main()
 	ImGui::StyleColorsClassic();
 	ImGui_ImplOpenGL3_Init("#version 330");
 
-	// build and compile shaders
+	// 编译shader
 	// -------------------------
 	Shader GeometryShader("../GLSL/geometry.vs", "../GLSL/geometry.fs");
 	Shader LightingShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_lighting.fs");
@@ -128,17 +133,17 @@ int main()
 	Shader IndirectBlurShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_blur.fs");
 	Shader MixerShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_mixer.fs");
 	Shader SkyboxShader("../GLSL/ssdo_skybox.vs", "../GLSL/ssdo_skybox.fs");
-	// load models
+	// 载入模型
 	// -----------
-	Model backpack("../resources/objects/dragon.obj");
+	Model models("../resources/objects/dragon.obj");
 
-	// configure g-buffer framebuffer
+	// 设置Gbuffer
 	// ------------------------------
 	unsigned int gBuffer;
 	glGenFramebuffers(1, &gBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 	unsigned int gPositionDepth, gNormal, gAlbedo;
-	// position color buffer
+	// 位置+深度buffer
 	glGenTextures(1, &gPositionDepth);
 	glBindTexture(GL_TEXTURE_2D, gPositionDepth);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_FLOAT, NULL);
@@ -147,35 +152,35 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPositionDepth, 0);
-	// normal color buffer
+	// 法线buffer
 	glGenTextures(1, &gNormal);
 	glBindTexture(GL_TEXTURE_2D, gNormal);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
-	// color + specular color buffer
+	// 颜色buffer
 	glGenTextures(1, &gAlbedo);
 	glBindTexture(GL_TEXTURE_2D, gAlbedo);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
-	// tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+	// Color attachment
 	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 	glDrawBuffers(3, attachments);
-	// create and attach depth buffer (renderbuffer)
+	// 深度buffer
 	unsigned int rboDepth;
 	glGenRenderbuffers(1, &rboDepth);
 	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
-	// finally check if framebuffer is complete
+	// 检查buffer是否完整
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	// also create framebuffer to hold SSAO processing stage 
+	// SSDO buffer
 	// -----------------------------------------------------
 	unsigned int
 		ssdoFBO, ssdoBlurFBO, ssdoLightingFBO, ssdoIndirectFBO, ssdoIndirectBlurFBO, skyboxFBO,
@@ -212,9 +217,9 @@ int main()
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	// generate sample kernel
+	// 生成采样核心
 	// ----------------------
-	std::uniform_real_distribution<GLfloat> randomFloats(0.0, 1.0); // generates random floats between 0.0 and 1.0
+	std::uniform_real_distribution<GLfloat> randomFloats(0.0, 1.0); 
 	std::default_random_engine generator;
 	std::vector<glm::vec3> ssdoKernel;
 	for (unsigned int i = 0; i < 64; ++i)
@@ -224,13 +229,13 @@ int main()
 		sample *= randomFloats(generator);
 		float scale = float(i) / 64.0f;
 
-		// scale samples s.t. they're more aligned to center of kernel
+		// 调整采样点，使其更靠近中心
 		scale = lerp(0.1f, 1.0f, scale * scale);
 		sample *= scale;
 		ssdoKernel.push_back(sample);
 	}
 
-	// generate noise texture
+	// 生成噪音texture
 	// ----------------------
 	std::vector<glm::vec3> ssdoNoise;
 	for (unsigned int i = 0; i < 16; i++)
@@ -249,13 +254,12 @@ int main()
 
 	unsigned int skyboxMap = loadCubemap(SKYBOX_TEXTURE);
 
-	// shader configuration
+	// shader 配置
 	// --------------------
 	LightingShader.use();
 	LightingShader.setInt("gPositionDepth", 0);
 	LightingShader.setInt("gNormal", 1);
 	LightingShader.setInt("gAlbedo", 2);
-	//LightingShader.setInt("ssdo", 3);
 
 	DirectShader.use();
 	DirectShader.setInt("gPositionDepth", 0);
@@ -291,12 +295,10 @@ int main()
 	MixerShader.setInt("texIndirectLight", 5);
 	MixerShader.setInt("texIndirectLightBlur", 6);
 	MixerShader.setInt("texSkybox", 7);
-	// render loop
+	// 渲染循环
 	// -----------
 	while (!glfwWindowShouldClose(window))
 	{
-		// per-frame time logic
-		// --------------------
 		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -306,16 +308,48 @@ int main()
 		else
 			glfwSetCursorPosCallback(window, NULL);
 
-		// input
-		// -----
+		if (modelType == 0 && previosType != modelType)
+			models = Model("../resources/objects/Dragon.obj");
+		if (modelType == 1 && previosType != modelType)
+			models = Model("../resources/objects/Buddha.obj");
+		if (modelType == 2 && previosType != modelType)
+		{
+			models = Model("../resources/objects/Arma.obj");
+			modelAngle2 = 180;
+		}
+		if (modelType == 3 && previosType != modelType)
+			models = Model("../resources/objects/Block.obj");
+		if (modelType == 4 && previosType != modelType)
+			models = Model("../resources/objects/Bunny.obj");
+		if (modelType == 5 && previosType != modelType)
+		{
+			models = Model("../resources/objects/dinosaur.obj");
+			modelAngle1 = -66.8;
+		}
+		if (modelType == 6 && previosType != modelType)
+			models = Model("../resources/objects/feisar.obj");
+		if (modelType == 7 && previosType != modelType)
+		{
+			models = Model("../resources/objects/horse.obj");
+			modelAngle1 = -89.1;
+			modelAngle3 = 146;
+		}
+		if (modelType == 8 && previosType != modelType)
+			models = Model("../resources/objects/kitten.obj");
+		if (modelType == 9 && previosType != modelType)
+			models = Model("../resources/objects/rocker.obj");
+
+		if ((modelType != 7 && modelType != 5 && modelType != 2)
+			&& previosType != modelType)
+			modelAngle1 = modelAngle2 = modelAngle3 = 0;
+
 		processInput(window);
 
-		// render
-		// ------
+
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// 1. geometry pass: render scene's geometry/color data into gbuffer
+		// 1. 几何渲染
 		// -----------------------------------------------------------------
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -325,25 +359,26 @@ int main()
 		GeometryShader.use();
 		GeometryShader.setMat4("projection", projection);
 		GeometryShader.setMat4("view", view);
-		// room cube
+		// 地面
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.0, -0.5f, 0.0f));
 		model = glm::scale(model, glm::vec3(2.0f));
 		model = glm::rotate(model, M_PI / 2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
 		GeometryShader.setMat4("model", model);
-		//GeometryShader.setInt("invertedNormals", 1); 
 		renderQuad();
-		GeometryShader.setInt("invertedNormals", 0);
-		// backpack model on the floor
+
+		// 地面上的模型
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.2f, 0.0));
-		model = glm::rotate(model, glm::radians(modelAngle), glm::vec3(1.0, 0.0, 0.0));
-		model = glm::scale(model, glm::vec3(1.0f));
+		model = glm::translate(model, glm::vec3(0.0f, modelPosition[modelType], 0.0));
+		model = glm::rotate(model, glm::radians(modelAngle1), glm::vec3(1.0, 0.0, 0.0));
+		model = glm::rotate(model, glm::radians(modelAngle2), glm::vec3(0.0, 1.0, 0.0));
+		model = glm::rotate(model, glm::radians(modelAngle3), glm::vec3(0.0, 0.0, 1.0));
+		model = glm::scale(model, glm::vec3(modelScale[modelType]));
 		GeometryShader.setMat4("model", model);
-		backpack.Draw(GeometryShader);
+		models.Draw(GeometryShader);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 2. lighting pass: traditional deferred Blinn-Phong lighting with added screen-space ambient occlusion
+		// 2. Blinn-Phong光照模型
 		// -----------------------------------------------------------------------------------------------------
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoLightingFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -351,7 +386,7 @@ int main()
 		// send light relevant uniforms
 		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightXYZ[0], lightXYZ[1], lightXYZ[2], 1.0));
 		LightingShader.setVec3("light.Position", lightPosView);
-		LightingShader.setVec3("light.Color", glm::fvec3(lightColor[0], lightColor[1], lightColor[2]));
+		LightingShader.setVec3("light.Color", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
 		// Update attenuation parameters
 		const float linear = 0.09f;
 		const float quadratic = 0.032f;
@@ -366,7 +401,7 @@ int main()
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 3. Direct SSDO
+		// 3. SSDO直接光照
 		// ------------------------
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -375,7 +410,6 @@ int main()
 		DirectShader.setMat4("iview", glm::inverse(view));
 		DirectShader.setInt("kernelSize", kernelSize);
 		DirectShader.setFloat("radius", radius);
-
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPositionDepth);
@@ -388,7 +422,7 @@ int main()
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 4. SSDO Blur
+		// 4. SSDO直接光照模糊
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoBlurFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
 		DirectBlurShader.use();
@@ -397,7 +431,7 @@ int main()
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 5. SSDO Indirect
+		// 5. SSDO间接光照
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoIndirectFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		IndirectShader.use();
@@ -409,13 +443,12 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, noiseTexture);
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, ssdoLightingTex);
-		// Send kernel + rotation 
 		IndirectShader.setMat4("projection", projection);
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		// 6. SSDO Indirect Blur
+		// 6. SSDO间接光照模糊
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoIndirectBlurFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
 		IndirectBlurShader.use();
@@ -424,7 +457,7 @@ int main()
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 7. Skybox
+		// 7. 天空盒
 		glBindFramebuffer(GL_FRAMEBUFFER, skyboxFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glDepthFunc(GL_LEQUAL);
@@ -432,14 +465,13 @@ int main()
 		auto viewM2 = glm::mat4(glm::mat3(view)); // no translation
 		SkyboxShader.setMat4("view", viewM2);
 		SkyboxShader.setMat4("projection", projection);
-		// skybox cube
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxMap);
 		renderCube();
 		glDepthFunc(GL_LESS);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 7. Accumulate Light pass
+		// 8. 组合所有光照
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		MixerShader.use();
 		MixerShader.setInt("mode", 8);
@@ -461,10 +493,10 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, skyboxTex);
 		renderQuad();
 
+		// Imgui控制面板
 		setImgui(window);
 
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -523,7 +555,12 @@ void setImgui(GLFWwindow* window)
 	ImGui::ColorEdit3("Light Color", lightColor);
 
 	ImGui::Text("Model Settings:");
-	ImGui::SliderFloat("Model Angel", &modelAngle, -180.0f, 180.0f, "angle = %.1f");
+	const char* items[] = { "Dragon", "Buddha","Arma","Block","Bunny","Dinosaur"
+,"Feisar","Horse","Kitten","Rocker" };
+	ImGui::Combo("Model", &modelType, items, IM_ARRAYSIZE(items));
+	ImGui::SliderFloat("Model Angel-x", &modelAngle1, -180.0f, 180.0f, "angle = %.1f");
+	ImGui::SliderFloat("Model Angel-y", &modelAngle2, -180.0f, 180.0f, "angle = %.1f");
+	ImGui::SliderFloat("Model Angel-z", &modelAngle3, -180.0f, 180.0f, "angle = %.1f");
 
 	ImGui::BeginMenuBar();
 	if (ImGui::BeginMenu("Options") == 1)

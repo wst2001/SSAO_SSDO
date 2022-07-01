@@ -47,5 +47,5 @@ void main()
     float depth = texture(gPosition,TexCoords).a;
     vec3 skybox = texture(texSkybox,TexCoords).rgb;
 
-    FragColor = (depth != 1 ? vec4(lighting, 1.0) : skybox);
+    FragColor = (depth != 1 ? vec4(lighting, 1.0) : vec4(skybox,1.0));
 }

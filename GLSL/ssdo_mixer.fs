@@ -39,7 +39,7 @@ void main()
 	else if (mode == 5)
         FragColor = indirectLightBlur;
     else if (mode == 6)
-        FragColor = vec3( (depth-1) / 10 );
+        FragColor = vec3(depth);// (depth-1) / 10 );
     else if (mode == 7)
         FragColor = skybox;
     else FragColor = ( depth != 1
