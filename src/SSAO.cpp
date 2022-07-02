@@ -407,7 +407,7 @@ int main()
 		shaderLightingPass.use();
 		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightXYZ[0], lightXYZ[1], lightXYZ[2], 1.0));
 		shaderLightingPass.setVec3("light.Position", lightPosView);
-		shaderLightingPass.setVec3("light.Color", glm::fvec3(lightColor[0], lightColor[1], lightColor[2]));
+		shaderLightingPass.setVec3("light.Color", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
 		const float linear = 0.09f;
 		const float quadratic = 0.032f;
 		shaderLightingPass.setFloat("light.Linear", linear);

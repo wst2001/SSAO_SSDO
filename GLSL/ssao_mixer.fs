@@ -33,6 +33,5 @@ void main()
         FragColor = vec3( (depth-1) / 10 );
     else if (mode == 5)
         FragColor = skybox;
-    else FragColor = ( depth != 1
-        ?  lighting : skybox);
+    else FragColor = ( depth != 1 ?  lighting : skybox);
 }
