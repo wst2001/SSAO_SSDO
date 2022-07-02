@@ -116,7 +116,7 @@ int main()
 	Shader shaderSSAO("../GLSL/ssao.vs", "../GLSL/ssao.fs");
 	Shader shaderSSAOBlur("../GLSL/ssao.vs", "../GLSL/ssao_blur.fs");
 	Shader SkyboxShader("../GLSL/skybox.vs", "../GLSL/skybox.fs");
-
+	Shader shaderMixer("../GLSL/ssao.vs", "../GLSL/ssao_mixer.fs");
 	Model models("../resources/objects/dragon.obj");
 
 
@@ -168,20 +168,22 @@ int main()
 
 	// 创建SSAO帧缓冲对象-----------------------------------------------------------------------------------
 	unsigned int 
-		ssaoFBO, ssaoBlurFBO, skyboxFBO,
-		ssaoTex, ssaoBlurTex, skyboxTex;
+		ssaoFBO, ssaoBlurFBO, skyboxFBO, ssaoLightingFBO, 
+		ssaoTex, ssaoBlurTex, skyboxTex, ssaoLightingTex;
 
 	unsigned int* FBOs[] = {
 		&ssaoFBO,
 		&ssaoBlurFBO,
 		&skyboxFBO,
+		&ssaoLightingFBO,
 	};
 	unsigned int* Texs[] = {
 		&ssaoTex,
 		&ssaoBlurTex,
 		&skyboxTex,
+		&ssaoLightingTex,
 	};
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 4; i++) {
 		auto FBO = FBOs[i];
 		auto Tex = Texs[i];
 		glGenFramebuffers(1, FBO);
@@ -240,7 +242,7 @@ int main()
 	shaderLightingPass.setInt("gNormal", 1);
 	shaderLightingPass.setInt("gAlbedo", 2);
 	shaderLightingPass.setInt("ssao", 3);
-	shaderLightingPass.setInt("texSkybox", 4);
+
 	shaderSSAO.use();
 	shaderSSAO.setInt("gPosition", 0);
 	shaderSSAO.setInt("gNormal", 1);
@@ -252,6 +254,13 @@ int main()
 	SkyboxShader.use();
 	SkyboxShader.setInt("skybox", 0);
 
+	shaderMixer.use();
+	shaderMixer.setInt("gPosition", 0);
+	shaderMixer.setInt("gNormal", 1);
+	shaderMixer.setInt("ssao", 2);
+	shaderMixer.setInt("ssaoBlur", 3);
+	shaderMixer.setInt("texLighting", 4);
+	shaderMixer.setInt("texSkybox", 5);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -392,7 +401,8 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		// 4. 光照明处理阶段
+		// 5. 光照明处理阶段
+		glBindFramebuffer(GL_FRAMEBUFFER, ssaoLightingFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shaderLightingPass.use();
 		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightXYZ[0], lightXYZ[1], lightXYZ[2], 1.0));
@@ -410,7 +420,24 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, gAlbedo);
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, ssaoBlurTex);
+		renderQuad();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// 8. 组合所有光照
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		shaderMixer.use();
+		shaderMixer.setInt("mode", 6);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, ssaoTex);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, ssaoBlurTex);
 		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, ssaoLightingTex);
+		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D, skyboxTex);
 		renderQuad();
 

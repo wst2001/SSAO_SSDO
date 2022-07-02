@@ -1,5 +1,5 @@
 #version 330 core
-out vec4 FragColor;
+out vec3 FragColor;
 
 in vec2 TexCoords;
 
@@ -7,7 +7,6 @@ uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedo;
 uniform sampler2D ssao;
-uniform sampler2D texSkybox;
 
 struct Light {
     vec3 Position;
@@ -44,8 +43,6 @@ void main()
     specular *= attenuation;
     lighting += diffuse + specular;
 
-    float depth = texture(gPosition,TexCoords).a;
-    vec3 skybox = texture(texSkybox,TexCoords).rgb;
 
-    FragColor = (depth != 1 ? vec4(lighting, 1.0) : vec4(skybox,1.0));
+    FragColor = lighting;
 }

@@ -122,7 +122,9 @@ int main()
 	// 编译shader
 	// -------------------------
 	Shader GeometryShader("../GLSL/geometry.vs", "../GLSL/geometry.fs");
-	Shader LightingShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_lighting.fs");
+	Shader SSAOShader("../GLSL/ssdo_pass.vs", "../GLSL/ssao.fs");
+	Shader SSAOBlurShader("../GLSL/ssdo_pass.vs", "../GLSL/ssao_blur.fs");
+	Shader SSAOLightingShader("../GLSL/ssdo_pass.vs", "../GLSL/ssao_lighting.fs");
 	Shader DirectShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_direct.fs");
 	Shader DirectBlurShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_blur.fs");
 	Shader IndirectShader("../GLSL/ssdo_pass.vs", "../GLSL/ssdo_indirect.fs");
@@ -131,7 +133,7 @@ int main()
 	Shader SkyboxShader("../GLSL/ssdo_skybox.vs", "../GLSL/ssdo_skybox.fs");
 	// 载入模型
 	// -----------
-	Model backpack("../resources/objects/dragon.obj");
+	Model models("../resources/objects/dragon.obj");
 
 	// 设置Gbuffer
 	// ------------------------------
@@ -179,8 +181,8 @@ int main()
 	// SSDO buffer
 	// -----------------------------------------------------
 	unsigned int
-		ssdoFBO, ssdoBlurFBO, ssdoLightingFBO, ssdoIndirectFBO, ssdoIndirectBlurFBO, skyboxFBO,
-		ssdoTex, ssdoBlurTex, ssdoLightingTex, ssdoIndirectTex, ssdoIndirectBlurTex, skyboxTex;
+		ssdoFBO, ssdoBlurFBO, ssdoLightingFBO, ssdoIndirectFBO, ssdoIndirectBlurFBO, skyboxFBO, ssaoFBO, ssaoBlurFBO,
+		ssdoTex, ssdoBlurTex, ssdoLightingTex, ssdoIndirectTex, ssdoIndirectBlurTex, skyboxTex, ssaoTex, ssaoBlurTex;
 	unsigned int* FBOs[] = {
 		&ssdoFBO,
 		&ssdoBlurFBO,
@@ -188,6 +190,8 @@ int main()
 		&ssdoIndirectFBO,
 		&ssdoIndirectBlurFBO,
 		&skyboxFBO,
+		&ssaoFBO,
+		&ssaoBlurFBO,
 	};
 	unsigned int* Texs[] = {
 		&ssdoTex,
@@ -196,8 +200,10 @@ int main()
 		&ssdoIndirectTex,
 		&ssdoIndirectBlurTex,
 		&skyboxTex,
+		&ssaoTex,
+		&ssaoBlurTex,
 	};
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 8; i++) {
 		auto FBO = FBOs[i];
 		auto Tex = Texs[i];
 		glGenFramebuffers(1, FBO);
@@ -252,10 +258,21 @@ int main()
 
 	// shader 配置
 	// --------------------
-	LightingShader.use();
-	LightingShader.setInt("gPositionDepth", 0);
-	LightingShader.setInt("gNormal", 1);
-	LightingShader.setInt("gAlbedo", 2);
+	SSAOShader.use();
+	SSAOShader.setInt("gPosition", 0);
+	SSAOShader.setInt("gNormal", 1);
+	SSAOShader.setInt("texNoise", 2);
+	for (unsigned int i = 0; i < 64; ++i)
+		SSAOShader.setVec3("samples[" + std::to_string(i) + "]", ssdoKernel[i]);
+
+	SSAOBlurShader.use();
+	SSAOBlurShader.setInt("ssaoInput", 0);
+
+	SSAOLightingShader.use();
+	SSAOLightingShader.setInt("gPositionDepth", 0);
+	SSAOLightingShader.setInt("gNormal", 1);
+	SSAOLightingShader.setInt("gAlbedo", 2);
+	SSAOLightingShader.setInt("ssao", 2);
 
 	DirectShader.use();
 	DirectShader.setInt("gPositionDepth", 0);
@@ -334,33 +351,59 @@ int main()
 		model = glm::rotate(model, glm::radians(modelAngle), glm::vec3(1.0, 0.0, 0.0));
 		model = glm::scale(model, glm::vec3(1.0f));
 		GeometryShader.setMat4("model", model);
-		backpack.Draw(GeometryShader);
+		models.Draw(GeometryShader);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 2. Blinn-Phong光照模型
+
+		// 2. 生成SSAO纹理
+		glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+		glClear(GL_COLOR_BUFFER_BIT);
+		SSAOShader.use();
+		SSAOShader.setMat4("projection", projection);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPositionDepth);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, noiseTexture);
+		renderQuad();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// 3. 模糊化
+		glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
+		glClear(GL_COLOR_BUFFER_BIT);
+		SSAOBlurShader.use();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, ssaoTex);
+		renderQuad();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// 4. Blinn-Phong光照模型
 		// -----------------------------------------------------------------------------------------------------
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoLightingFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		LightingShader.use();
+		SSAOLightingShader.use();
 		// send light relevant uniforms
 		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightXYZ[0], lightXYZ[1], lightXYZ[2], 1.0));
-		LightingShader.setVec3("light.Position", lightPosView);
-		LightingShader.setVec3("light.Color", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
+		SSAOLightingShader.setVec3("light.Position", lightPosView);
+		SSAOLightingShader.setVec3("light.Color", glm::vec3(lightColor[0], lightColor[1], lightColor[2]));
 		// Update attenuation parameters
 		const float linear = 0.09f;
 		const float quadratic = 0.032f;
-		LightingShader.setFloat("light.Linear", linear);
-		LightingShader.setFloat("light.Quadratic", quadratic);
+		SSAOLightingShader.setFloat("light.Linear", linear);
+		SSAOLightingShader.setFloat("light.Quadratic", quadratic);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPositionDepth);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, gNormal);
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, gAlbedo);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, ssaoBlurTex);
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 3. SSDO直接光照
+		// 5. SSDO直接光照
 		// ------------------------
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -381,7 +424,7 @@ int main()
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 4. SSDO直接光照模糊
+		// 6. SSDO直接光照模糊
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoBlurFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
 		DirectBlurShader.use();
@@ -390,7 +433,7 @@ int main()
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 5. SSDO间接光照
+		// 7. SSDO间接光照
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoIndirectFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		IndirectShader.use();
@@ -407,7 +450,7 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		// 6. SSDO间接光照模糊
+		// 8. SSDO间接光照模糊
 		glBindFramebuffer(GL_FRAMEBUFFER, ssdoIndirectBlurFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
 		IndirectBlurShader.use();
@@ -416,7 +459,7 @@ int main()
 		renderQuad();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 7. 天空盒
+		// 9. 天空盒
 		glBindFramebuffer(GL_FRAMEBUFFER, skyboxFBO);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glDepthFunc(GL_LEQUAL);
@@ -430,7 +473,7 @@ int main()
 		glDepthFunc(GL_LESS);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 8. 组合所有光照
+		// 10. 组合所有光照
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		MixerShader.use();
 		MixerShader.setInt("mode", 8);
