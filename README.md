@@ -23,7 +23,7 @@
 
 运行成功后，用户可以观察到一个栩栩如生的龙模型在天空之下、山水之间的光照渲染结果，如下图所示.
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/e18f8cbb0b25423a8b909a605eacdece.png#pic_center)
+![渲染结果](https://github.com/yyChen233/SSAO/blob/main/%E6%B8%B2%E6%9F%93%E7%BB%93%E6%9E%9C.png)
 
 
 
