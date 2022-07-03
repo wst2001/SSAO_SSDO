@@ -1,17 +1,17 @@
-ï»¿
-# è®¡ç®—æœºå›¾å½¢å­¦ SSAO & SSDO
-- é¡¹ç›®ç®€ä»‹  
 
- æœ¬é¡¹ç›®æ˜¯åˆ©ç”¨**å±å¹•ç©ºé—´çŽ¯å¢ƒå…‰é®è”½**ï¼ˆScreen-Space Ambient Occlusionï¼ŒSSAOï¼‰æŠ€æœ¯ä»¥åŠ**å±å¹•ç©ºé—´å®šå‘é®è”½**ï¼ˆScreen-Space Directional Occlusionï¼ŒSSDOï¼‰æŠ€æœ¯å®žçŽ°çš„å›¾å½¢æ¸²æŸ“ç¨‹åº.  
- 
- æœ¬é¡¹ç›®ä»¥GLFWåº“å’ŒGLADåº“ä¸ºåŸºç¡€è¿›è¡ŒOpenGLç¼–ç¨‹ï¼Œä½¿ç”¨Assimpåº“ä»¥å¯¼å…¥æ¨¡åž‹ï¼Œä½¿ç”¨Imguiåº“ä»¥åˆ›å»ºäº¤äº’çª—å£. 
- 
- æœ¬é¡¹ç›®åœ¨å®žçŽ°äº†SSAOå’ŒSSDOæŠ€æœ¯çš„åŒæ—¶ï¼Œå…è®¸ç”¨æˆ·è‡ªè¡Œè®¾ç½®æŸäº›æŠ€æœ¯å‚æ•°ï¼Œå¹¶å¯ä»¥é€‰æ‹©ä¸åŒçš„æ¨¡åž‹ã€ä»¥ä»»æ„è§†è§’è§‚å¯Ÿæ¸²æŸ“ç»“æžœ.
- 
-- ç¼–è¯‘å’Œæ‰§è¡Œæ–¹æ³•  
+# ¼ÆËã»úÍ¼ÐÎÑ§ SSAO & SSDO
+- ÏîÄ¿¼ò½é  
 
-æœ¬é¡¹ç›®å¯ä»¥ä½¿ç”¨cmakeè¿›è¡Œç¼–è¯‘.è¾“å…¥å¦‚ä¸‹å‘½ä»¤å³å¯ç¼–è¯‘ä»£ç .
-```
+ ±¾ÏîÄ¿ÊÇÀûÓÃ**ÆÁÄ»¿Õ¼ä»·¾³¹âÕÚ±Î**£¨Screen-Space Ambient Occlusion£¬SSAO£©¼¼ÊõÒÔ¼°**ÆÁÄ»¿Õ¼ä¶¨ÏòÕÚ±Î**£¨Screen-Space Directional Occlusion£¬SSDO£©¼¼ÊõÊµÏÖµÄÍ¼ÐÎäÖÈ¾³ÌÐò.  
+
+ ±¾ÏîÄ¿ÒÔGLFW¿âºÍGLAD¿âÎª»ù´¡½øÐÐOpenGL±à³Ì£¬Ê¹ÓÃAssimp¿âÒÔµ¼ÈëÄ£ÐÍ£¬Ê¹ÓÃImgui¿âÒÔ´´½¨½»»¥´°¿Ú. 
+
+ ±¾ÏîÄ¿ÔÚÊµÏÖÁËSSAOºÍSSDO¼¼ÊõµÄÍ¬Ê±£¬ÔÊÐíÓÃ»§×ÔÐÐÉèÖÃÄ³Ð©¼¼Êõ²ÎÊý£¬²¢¿ÉÒÔÑ¡Ôñ²»Í¬µÄÄ£ÐÍ¡¢ÒÔÈÎÒâÊÓ½Ç¹Û²ìäÖÈ¾½á¹û.
+
+- ±àÒëºÍÖ´ÐÐ·½·¨  
+
+±¾ÏîÄ¿¿ÉÒÔÊ¹ÓÃcmake½øÐÐ±àÒë.ÔÚÔ´´úÂëÎÄ¼þ¼ÐÏÂÖ´ÐÐÈçÏÂÃüÁî¼´¿É±àÒë´úÂë.
+```c
   mkdir build 
   cd build
   cmake ..
@@ -19,47 +19,47 @@
   cmake --build build
 ```
 
-ä»¥Visual Studio 2022çŽ¯å¢ƒä¸ºä¾‹ï¼Œç¼–è¯‘å®ŒæˆåŽï¼Œæ‰“å¼€buildæ–‡ä»¶å¤¹ä¸‹çš„SSAO_SSDO.slnæ–‡ä»¶ï¼Œé€‰æ‹©é¡¹ç›®SSAOæˆ–SSDOï¼Œå³é”®**è®¾ä¸ºå¯åŠ¨é¡¹ç›®**åŽå³å¯ä½¿ç”¨**æœ¬åœ°Windowsè°ƒè¯•å™¨**æ‰§è¡Œ.
+ÒÔVisual Studio 2022»·¾³ÎªÀý£¬±àÒëÍê³Éºó£¬´ò¿ªbuildÎÄ¼þ¼ÐÏÂµÄSSAO_SSDO.slnÎÄ¼þ£¬Ñ¡ÔñÏîÄ¿SSAO»òSSDO»òSSAOplusSSDP£¬ÓÒ¼ü**ÉèÎªÆô¶¯ÏîÄ¿**ºó¼´¿ÉÊ¹ÓÃ**±¾µØWindowsµ÷ÊÔÆ÷**Ö´ÐÐ.
 
-è¿è¡ŒæˆåŠŸåŽï¼Œç”¨æˆ·å¯ä»¥è§‚å¯Ÿåˆ°ä¸€ä¸ªæ ©æ ©å¦‚ç”Ÿçš„é¾™æ¨¡åž‹åœ¨å¤©ç©ºä¹‹ä¸‹ã€å±±æ°´ä¹‹é—´çš„å…‰ç…§æ¸²æŸ“ç»“æžœï¼Œå¦‚ä¸‹å›¾æ‰€ç¤º.
+**Çë×¢Òâ£¬Èç¹û±àÒë¹ý³Ì³öÏÖÎÊÌâ£¬Çë½«Ô´´úÂëÎÄ¼þ¼ÐÖÐµÄlibÎÄ¼þ¼ÐÏÂµÄËùÓÐ¿âÎÄ¼þÌæ»»³Élib1ÎÄ¼þ¼ÐÏÂµÄ¿âÎÄ¼þ.Õâ¿ÉÄÜÊÇ¿âµÄ¼æÈÝÐÔµ¼ÖÂµÄÎÊÌâ.**
 
-![åœ¨è¿™é‡Œæ’å…¥å›¾ç‰‡æè¿°](https://img-blog.csdnimg.cn/e18f8cbb0b25423a8b909a605eacdece.png#pic_center)
+ÔËÐÐ³É¹¦ºó£¬ÓÃ»§¿ÉÒÔ¹Û²ìµ½Ò»¸öèòèòÈçÉúµÄÁúÄ£ÐÍÔÚÌì¿ÕÖ®ÏÂ¡¢É½Ë®Ö®¼äµÄ¹âÕÕäÖÈ¾½á¹û.
+
+-  ½»»¥·½Ê½
+
+1. ÊÓµãºÍÊÓ½ÇµÄ×ÔÓÉ±ä»»
+
+  1.1  ÔÚÓ¢ÎÄÊäÈë·¨ÏÂ°´ÏÂ¼üÅÌÉÏµÄW/S/A/D¼ü£¬¿ÉÒÔÊµÏÖÉãÏñ»úµÄÇ°/ºó/×ó/ÓÒÒÆ¶¯.
+
+  1.2  °´ÏÂ¼üÅÌÉÏµÄ¿Õ¸ñ¼ü£¬¿ÉÒÔÊµÏÖÉãÏñ»úÏòÉÏÒÆ¶¯£»°´ÏÂ¼üÅÌÉÏµÄShift¼ü£¬¿ÉÒÔÊµÏÖÉãÏñ»úÏòÏÂÒÆ¶¯.
+
+  1.3  °´ÏÂ¼üÅÌÉÏµÄÉÏ¡¢ÏÂ¡¢×ó¡¢ÓÒ¼ü£¨²»ÊÇÐ¡¼üÅÌÉÏµÄ¼ü£©£¬¿ÉÒÔÊµÏÖÉãÏñ»úÊÓ½ÇÏòÉÏ¡¢ÏòÏÂ¡¢Ïò×ó¡¢ÏòÓÒ±ä¶¯£¨¿ÉÒÔ·Ö±ðÀí½âÎªÌ§Í·¿´¡¢µÍÍ·¿´¡¢Ïò×ó¿´¡¢ÏòÓÒ¿´£©.
+
+  1.4 Ê¹ÓÃÊó±ê¹öÂÖ¿ÉÒÔ½øÐÐËõ·Å.
+
+  1.5 **ÆÕÍ¨Ä£Ê½**ºÍ**MCÄ£Ê½**£ºÔÚÊó±ê½»»¥½çÃæ¡°Settings¡±µã»÷Options²Ëµ¥À¸£¬Ñ¡ÔñMC Mode£¬¼´¿ÉÓÉÆÕÍ¨Ä£Ê½½øÈë¡°MCÄ£Ê½¡±£¬Ò²¼´ÊÇÀàËÆÓÚÓÎÏ·¡°Minecraft£¨ÎÒµÄÊÀ½ç£©¡±µÄÊÓ½Ç±ä»»Ä£Ê½.´ËÄ£Ê½ÏÂÓÃ»§µÄÊó±ê½«±»²¶»ñ¶ø²»ÔÙ³öÏÖ£¬ÉãÏñ»úµÄÊÓ½Ç½«ËæÓÃ»§µÄÊó±êµÄÒÆ¶¯¶ø·¢Éú±ä»¯.½øÈëMCÄ£Ê½ºó£¬Èç¹ûÏëÍË³ö¸ÃÄ£Ê½£¬°´Ò»´Î¼üÅÌÉÏµÄEsc¼ü¼´¿É.
+
+2. µ÷ÕûSSAO/SSDOÊôÐÔ
+
+  ÔÚÆÕÍ¨Ä£Ê½ÏÂ£¬Í¨¹ýÊó±ê½»»¥½çÃæ¡°Settings¡±ÖÐµÄ¡°SSAO/SSDO Settings¡±ÁÐ±í£¬ÓÃ»§¿ÉÒÔÍ¨¹ýÍÏ¶¯»¬¶¯ÌõµÄ·½Ê½ÈËÎªÉèÖÃSSAO/SSDOµÄ²ÎÊý£¬±ÈÈç²ÉÑùºËÐÄ¹æÄ£(Size of Kernel)ºÍ²ÉÑù°ë¾¶(Radius)µÈ.
+
+3. µ÷Õû¹âÕÕÊôÐÔ
+
+  ÔÚÆÕÍ¨Ä£Ê½ÏÂ£¬ÓÃ»§¿ÉÒÔÔÚ½»»¥½çÃæ¡°Settings¡±ÖÐµÄ¡°Light Settings¡±ÁÐ±íÏÂµ÷Õû¹âÕÕÊôÐÔ.
+
+  Ò»·½Ãæ£¬ÓÃ»§¿ÉÒÔÊÖ¶¯ÍÏ¶¯»¬¶¯ÌõÒÔµ÷Õû¹âÔ´Î»ÖÃ(Light Position)µÄxyz·ÖÁ¿£¬´Ó¶øµ÷Õû¹âÔ´Î»ÖÃ£»
+
+  ÁíÒ»·½Ãæ£¬ÓÃ»§¿ÉÒÔÉèÖÃ¹âÔ´µÄÑÕÉ«(Light Color).ÓÃ»§¿ÉÒÔÈËÎªÊäÈëRGBÉ«Öµ£¨Èç±±´óºì£ºR=139 , G=0 , B=18£©£¬Ò²¿ÉÒÔÔÚÉ«°åÖÐ½øÐÐÑÕÉ«Ñ¡Ôñ.
+
+4. µ÷ÕûÄ£ÐÍÊôÐÔ
+
+  ÔÚÆÕÍ¨Ä£Ê½ÏÂ£¬ÓÃ»§¿ÉÒÔÔÚ½»»¥½çÃæ¡°Settings¡±ÖÐµÄ¡°Model Settings¡±ÁÐ±íÏÂµ÷ÕûÄ£ÐÍÊôÐÔ.
+
+  ÓÃ»§¿ÉÒÔÀûÓÃÏÂÀ­µ¥Ñ¡¿òÔÚÔ¤ÖÃµÄ10¸öÄ£ÐÍÖÐ½øÐÐÇÐ»»£¬ÒÔ¹Û²ì²»Í¬µÄÄ£ÐÍµÄäÖÈ¾Ð§¹û£»ÓÃ»§»¹¿ÉÒÔÈËÎªµ÷ÕûÄ£ÐÍµÄ·ÅÖÃµ÷¶È£¬Í¨¹ýÍÏ¶¯»¬¶¯Ìõµ÷ÕûModel Angle£¬´Ó¶øÈÆxyzÖáÐý×ªÄ£ÐÍ.
+
+5. ÍË³ö³ÌÐò
+
+   ÔÚÆÕÍ¨Ä£Ê½°´ÏÂ¼üÅÌÉÏµÄEsc¼ü£¬¿ÉÒÔ½áÊø³ÌÐò²¢¹Ø±Õ´°¿Ú.ÈôÔÚMCÄ£Ê½ÏÂ°´ÏÂEsc¼ü£¬½«ÍË³ö¸ÃÄ£Ê½¶ø±äÎªÆÕÍ¨Ä£Ê½£¨¼û1.5£©£¬ÍË³öºóÔÙ°´Ò»´ÎEsc¼ü£¬¼´¿ÉÍË³ö³ÌÐò.´ËÍâ£¬ÓÃ»§»¹¿ÉÒÔµã»÷Options²Ëµ¥À¸£¬µã»÷QuitÑ¡ÏîÀ´ÍË³ö³ÌÐò.
 
 
-
--  äº¤äº’æ–¹å¼
-
-1. è§†ç‚¹å’Œè§†è§’çš„è‡ªç”±å˜æ¢
-
-	1.1  åœ¨è‹±æ–‡è¾“å…¥æ³•ä¸‹æŒ‰ä¸‹é”®ç›˜ä¸Šçš„W/S/A/Dé”®ï¼Œå¯ä»¥å®žçŽ°æ‘„åƒæœºçš„å‰/åŽ/å·¦/å³ç§»åŠ¨.
-	
-	1.2  æŒ‰ä¸‹é”®ç›˜ä¸Šçš„ç©ºæ ¼é”®ï¼Œå¯ä»¥å®žçŽ°æ‘„åƒæœºå‘ä¸Šç§»åŠ¨ï¼›æŒ‰ä¸‹é”®ç›˜ä¸Šçš„Shifté”®ï¼Œå¯ä»¥å®žçŽ°æ‘„åƒæœºå‘ä¸‹ç§»åŠ¨.
-	
-	1.3  æŒ‰ä¸‹é”®ç›˜ä¸Šçš„ä¸Šã€ä¸‹ã€å·¦ã€å³é”®ï¼ˆä¸æ˜¯å°é”®ç›˜ä¸Šçš„é”®ï¼‰ï¼Œå¯ä»¥å®žçŽ°æ‘„åƒæœºè§†è§’å‘ä¸Šã€å‘ä¸‹ã€å‘å·¦ã€å‘å³å˜åŠ¨ï¼ˆå¯ä»¥åˆ†åˆ«ç†è§£ä¸ºæŠ¬å¤´çœ‹ã€ä½Žå¤´çœ‹ã€å‘å·¦çœ‹ã€å‘å³çœ‹ï¼‰.
-	
-	1.4 ä½¿ç”¨é¼ æ ‡æ»šè½®å¯ä»¥è¿›è¡Œç¼©æ”¾.
-	
-	1.5 **æ™®é€šæ¨¡å¼**å’Œ**MCæ¨¡å¼**ï¼šåœ¨é¼ æ ‡äº¤äº’ç•Œé¢â€œSettingsâ€ç‚¹å‡»Optionsèœå•æ ï¼Œé€‰æ‹©MC Modeï¼Œå³å¯ç”±æ™®é€šæ¨¡å¼è¿›å…¥â€œMCæ¨¡å¼â€ï¼Œä¹Ÿå³æ˜¯ç±»ä¼¼äºŽæ¸¸æˆâ€œMinecraftï¼ˆæˆ‘çš„ä¸–ç•Œï¼‰â€çš„è§†è§’å˜æ¢æ¨¡å¼.æ­¤æ¨¡å¼ä¸‹ç”¨æˆ·çš„é¼ æ ‡å°†è¢«æ•èŽ·è€Œä¸å†å‡ºçŽ°ï¼Œæ‘„åƒæœºçš„è§†è§’å°†éšç”¨æˆ·çš„é¼ æ ‡çš„ç§»åŠ¨è€Œå‘ç”Ÿå˜åŒ–.è¿›å…¥MCæ¨¡å¼åŽï¼Œå¦‚æžœæƒ³é€€å‡ºè¯¥æ¨¡å¼ï¼ŒæŒ‰ä¸€æ¬¡é”®ç›˜ä¸Šçš„Escé”®å³å¯.
-
-2. è°ƒæ•´SSAO/SSDOå±žæ€§
-	
-	åœ¨æ™®é€šæ¨¡å¼ä¸‹ï¼Œé€šè¿‡é¼ æ ‡äº¤äº’ç•Œé¢â€œSettingsâ€ä¸­çš„â€œSSAO/SSDO Settingsâ€åˆ—è¡¨ï¼Œç”¨æˆ·å¯ä»¥é€šè¿‡æ‹–åŠ¨æ»‘åŠ¨æ¡çš„æ–¹å¼äººä¸ºè®¾ç½®SSAO/SSDOçš„å‚æ•°ï¼Œæ¯”å¦‚é‡‡æ ·æ ¸å¿ƒè§„æ¨¡(Size of Kernel)å’Œé‡‡æ ·åŠå¾„(Radius)ç­‰.
-
-3. è°ƒæ•´å…‰ç…§å±žæ€§
-
-	åœ¨æ™®é€šæ¨¡å¼ä¸‹ï¼Œç”¨æˆ·å¯ä»¥åœ¨äº¤äº’ç•Œé¢â€œSettingsâ€ä¸­çš„â€œLight Settingsâ€åˆ—è¡¨ä¸‹è°ƒæ•´å…‰ç…§å±žæ€§.
-	
-	ä¸€æ–¹é¢ï¼Œç”¨æˆ·å¯ä»¥æ‰‹åŠ¨æ‹–åŠ¨æ»‘åŠ¨æ¡ä»¥è°ƒæ•´å…‰æºä½ç½®(Light Position)çš„xyzåˆ†é‡ï¼Œä»Žè€Œè°ƒæ•´å…‰æºä½ç½®ï¼›
-
-	å¦ä¸€æ–¹é¢ï¼Œç”¨æˆ·å¯ä»¥è®¾ç½®å…‰æºçš„é¢œè‰²(Light Color).ç”¨æˆ·å¯ä»¥äººä¸ºè¾“å…¥RGBè‰²å€¼ï¼ˆå¦‚åŒ—å¤§çº¢ï¼šR=139 , G=0 , B=18ï¼‰ï¼Œä¹Ÿå¯ä»¥åœ¨è‰²æ¿ä¸­è¿›è¡Œé¢œè‰²é€‰æ‹©.
-
-4. è°ƒæ•´æ¨¡åž‹å±žæ€§
-
-	åœ¨æ™®é€šæ¨¡å¼ä¸‹ï¼Œç”¨æˆ·å¯ä»¥åœ¨äº¤äº’ç•Œé¢â€œSettingsâ€ä¸­çš„â€œModel Settingsâ€åˆ—è¡¨ä¸‹è°ƒæ•´æ¨¡åž‹å±žæ€§.
-
-	ç”¨æˆ·å¯ä»¥åˆ©ç”¨ä¸‹æ‹‰å•é€‰æ¡†åœ¨é¢„ç½®çš„10ä¸ªæ¨¡åž‹ä¸­è¿›è¡Œåˆ‡æ¢ï¼Œä»¥è§‚å¯Ÿä¸åŒçš„æ¨¡åž‹çš„æ¸²æŸ“æ•ˆæžœï¼›ç”¨æˆ·è¿˜å¯ä»¥äººä¸ºè°ƒæ•´æ¨¡åž‹çš„æ”¾ç½®è°ƒåº¦ï¼Œé€šè¿‡æ‹–åŠ¨æ»‘åŠ¨æ¡è°ƒæ•´Model Angleï¼Œä»Žè€Œç»•xyzè½´æ—‹è½¬æ¨¡åž‹.
-
-5. é€€å‡ºç¨‹åº
-
- 	åœ¨æ™®é€šæ¨¡å¼æŒ‰ä¸‹é”®ç›˜ä¸Šçš„Escé”®ï¼Œå¯ä»¥ç»“æŸç¨‹åºå¹¶å…³é—­çª—å£.è‹¥åœ¨MCæ¨¡å¼ä¸‹æŒ‰ä¸‹Escé”®ï¼Œå°†é€€å‡ºè¯¥æ¨¡å¼è€Œå˜ä¸ºæ™®é€šæ¨¡å¼ï¼ˆè§1.5ï¼‰ï¼Œé€€å‡ºåŽå†æŒ‰ä¸€æ¬¡Escé”®ï¼Œå³å¯é€€å‡ºç¨‹åº.æ­¤å¤–ï¼Œç”¨æˆ·è¿˜å¯ä»¥ç‚¹å‡»Optionsèœå•æ ï¼Œç‚¹å‡»Quité€‰é¡¹æ¥é€€å‡ºç¨‹åº.
 
